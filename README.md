@@ -51,6 +51,8 @@ Project Organization
     └── tox.ini            <- tox file with settings for running tox; see tox.testrun.org
 
 
+使用文档看这里：[Cookiecutter Data Science](http://drivendata.github.io/cookiecutter-data-science/)
+
 项目自动生成模版
 ------------
 
