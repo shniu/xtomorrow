@@ -1,7 +1,7 @@
 xtomorrow
 ==============================
 
-A short description of the project.
+关于 Python 的一切。
 
 Project Organization
 ------------
@@ -50,6 +50,14 @@ Project Organization
     │
     └── tox.ini            <- tox file with settings for running tox; see tox.testrun.org
 
+
+项目自动生成模版
+------------
+
+Python 的自动模版生成项目 [cookiecutter](https://github.com/cookiecutter/cookiecutter#python)
+
+1. [cookiecutter-data-science](https://github.com/drivendata/cookiecutter-data-science)
+2. [cookiecutter-docker-science](https://github.com/docker-science/cookiecutter-docker-science)
 
 --------
 
