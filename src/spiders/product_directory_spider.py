@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import json
 import collections
 import requests
 import time
@@ -34,6 +33,7 @@ result_list = []
 err_list = []
 err_req_list = []
 special_handle_list = []
+less_level_list = []
 
 user_agent = [
     "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; en-us) AppleWebKit/534.50 (KHTML, like Gecko) Version/5.1 Safari/534.50",
@@ -176,12 +176,15 @@ def get_level3_directory(content, level, parent, parent_url, parent_path):
 
         # add url to spider_task_queue
         if not leaf:
+            if len(code[0]) > 6:
+                less_level_list.append(name)
+
             href = item.xpath("./td[1]/a/@href").extract()[0]
             spider_task_queue.append({
                 "level": level + 1,
                 "url": parent_url[0:parent_url.rfind('/') + 1] + href,
                 "name": name,
-                "direct": len(code[0]) > 6,
+                "direct": len(code[0]) > 6 and code[0].endswith("0000"),
                 "path": path
             })
 
@@ -193,8 +196,8 @@ def get_level3_directory(content, level, parent, parent_url, parent_path):
             "path": path
         })
 
-        if env == DEV:
-            break
+        # if env == DEV:
+        #     break
     print u"\t\t|- 提交 ", len(items), u" 个任务到Spider queue"
 
 
@@ -214,6 +217,9 @@ def get_level4_directory(content, level, parent, parent_url, parent_path):
 
         # add url to spider_task_queue
         if not leaf:
+            if len(code[0]) > 8:
+                less_level_list.append(name)
+
             href = item.xpath("./td[1]/a/@href").extract()[0]
             spider_task_queue.append({
                 "level": level + 1,
@@ -230,8 +236,8 @@ def get_level4_directory(content, level, parent, parent_url, parent_path):
             "path": path
         })
 
-        if env == DEV:
-            break
+        # if env == DEV:
+        #     break
     print u"\t\t|- 提交 ", len(items), u" 个任务到Spider queue"
 
 
@@ -272,7 +278,7 @@ def parse_html(content, level, name, url, path):
 
 
 def valid(path):
-    path_arr = path.split("/")
+    path_arr = path.split(PATH_SEP)
     if len(path_arr) <= 5:
         return path_arr
     else:
@@ -360,35 +366,38 @@ def main(start, end):
             spider_task_queue.append(task)
             continue
 
-        # parse html
-        if "direct" in task and task['direct']:
-            print u"\t|- 特殊处理 -> ", task['url']
-            special_handle_list.append(task)
-            get_level5_directory(resp.content, task['level'], task['name'], task['path'])
-
         try:
             content = resp.content.decode("gb2312")
         except UnicodeDecodeError:
             content = resp.content.decode("utf-8")
 
+        # parse html
+        if "direct" in task and task['direct']:
+            print u"\t|- 特殊处理 -> ", task['url']
+            special_handle_list.append(task)
+            get_level5_directory(content, task['level'], task['name'], task['path'])
+
         parse_html(content, task['level'], task['name'], task['url'], task['path'])
 
         print u"\t|- 当前剩余 ", len(spider_task_queue), u" 个待处理任务"
 
-        time.sleep(random.random() + 0.2)
+        time.sleep(random.random())
 
     # save result
-    res_local_name = "res-{}-{}.xlsx".format(str(start), str(end))
+    ts = str(random.randint(10000, 100000000))
+    res_local_name = "res-{}-{}-{}.xlsx".format(str(start), str(end), ts)
     print u"保存解析结果到 -> ", res_local_name
     df = pd.DataFrame(result_list)
     df.to_excel(res_local_name)
 
-    file_name = "directory-{}-{}.xlsx".format(str(start), str(end))
+    file_name = "directory-{}-{}-{}.xlsx".format(str(start), str(end), ts)
     handle_result(file_name)
+    print u"保存最终结果到 -> ", file_name
 
     print u"处理结果异常数据 -> ", err_list
     print u"下载页面请求异常 -> ", err_req_list
     print u"特殊处理数据 -> ", special_handle_list
+    print u"code 代码不符合层级的数据 -> ", less_level_list
     print u"爬虫任务爬取结束"
 
 
