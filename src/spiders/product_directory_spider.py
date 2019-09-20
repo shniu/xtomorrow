@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import json
 import collections
 import requests
 import time
 import random
 import pandas as pd
+import click
 from requests import ReadTimeout
 from scrapy.selector import Selector
+
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 DEBUG = "debug"
 DEV = "dev"
@@ -100,6 +106,7 @@ def get_level1_directory(content, parent_path):
 
         if env == DEV:
             break
+    print u"\t\t|- 提交 ", len(items), u" 个任务到Spider queue"
 
 
 def get_level2_directory(content, level, parent, parent_url, parent_path):
@@ -138,6 +145,7 @@ def get_level2_directory(content, level, parent, parent_url, parent_path):
 
         if env == DEV:
             break
+    print u"\t\t|- 提交 ", len(items), u" 个任务到Spider queue"
 
 
 def get_level3_directory(content, level, parent, parent_url, parent_path):
@@ -179,6 +187,7 @@ def get_level3_directory(content, level, parent, parent_url, parent_path):
 
         if env == DEV:
             break
+    print u"\t\t|- 提交 ", len(items), u" 个任务到Spider queue"
 
 
 def get_level4_directory(content, level, parent, parent_url, parent_path):
@@ -214,6 +223,7 @@ def get_level4_directory(content, level, parent, parent_url, parent_path):
 
         if env == DEV:
             break
+    print u"\t\t|- 提交 ", len(items), u" 个任务到Spider queue"
 
 
 def get_level5_directory(content, level, parent, parent_path):
@@ -228,10 +238,12 @@ def get_level5_directory(content, level, parent, parent_path):
             "leaf": True,
             "path": parent_path + "/" + name if parent_path != "" else name
         })
+    
+    print u"\t\t|- 解析 ", len(items), u" 个叶子目录"
 
 
 def parse_html(content, level, name, url, path):
-    print "开始处理 get level -> ", level + 1
+    print u"\t|- 开始处理 get level -> ", level + 1
     if level == 0:
         get_level1_directory(content, path)
 
@@ -247,10 +259,10 @@ def parse_html(content, level, name, url, path):
     if level == 4:
         get_level5_directory(content, level, name, path)
 
-    print "处理完成 get level -> ", level + 1
+    print u"\t|- 处理完成 get level -> ", level + 1
 
 
-def handle_result():
+def handle_result(file_name):
     martx = []
     max_level = 5
     for res in result_list:
@@ -268,7 +280,7 @@ def handle_result():
             martx.append(row)
 
     df = pd.DataFrame(martx, columns=['一级目录', '二级目录', '三级目录', '四级目录', '五级目录'])
-    df.to_excel("directory.xlsx")
+    df.to_excel(file_name)
 
 
 def downloader(task):
@@ -277,14 +289,20 @@ def downloader(task):
     }
     try:
         resp = requests.get(task['url'], timeout=15, headers=headers)
-        print resp.status_code, resp.encoding, resp.url
+        print u"\t|- 请求响应 -> ", resp.status_code, resp.encoding, resp.url
+        if resp.status_code != 200:
+            return None
+
         return resp
     except ReadTimeout:
-        print "抓取超时，再次加入 spider queue"
+        print u"\t|- 抓取超时，再次加入 spider queue"
         return None
 
 
-def main():
+@click.command()
+@click.argument('start', type=int)
+@click.argument('end', type=int)
+def main(start, end):
     """ spider """
 
     if env == DEBUG:
@@ -295,11 +313,12 @@ def main():
         test_get_level5()
         exit()
 
-    init_spider_queue()
+    print u"处理目录入口链接 -> ", start, end
+    init_spider_queue(start, end)
 
     while len(spider_task_queue) != 0:
         task = spider_task_queue.popleft()
-        print "处理爬虫任务 - ", task
+        print u"处理爬虫任务 - ", task
 
         # download
         # try:
@@ -316,7 +335,7 @@ def main():
 
         # parse html
         if "direct" in task and task['direct']:
-            print "特殊处理 -> ", task['url']
+            print u"\t|- 特殊处理 -> ", task['url']
             get_level5_directory(resp.content, task['level'], task['name'], task['path'])
 
         try:
@@ -326,15 +345,23 @@ def main():
 
         parse_html(content, task['level'], task['name'], task['url'], task['path'])
 
+        print u"\t|- 当前剩余 ", len(spider_task_queue), u" 个待处理任务"
+
         time.sleep(random.random() + 0.2)
 
-    print result_list
-    handle_result()
+    # save result
+    res_local_name = "res-{}-{}.xlsx".format(str(start), str(end))
+    print u"\t|- 保存解析结果到 ", res_local_name
+    df = pd.DataFrame(result_list)
+    df.to_excel(res_local_name)
+
+    file_name = "directory-{}-{}.xlsx".format(str(start), str(end))
+    handle_result(file_name)
 
 
-def init_spider_queue():
+def init_spider_queue(start, end):
     """ init spider task queue """
-    for i in range(directory_page_cnt):
+    for i in range(start, end):
         if i == 0:
             page_num = ""
         else:
@@ -346,8 +373,8 @@ def init_spider_queue():
             "name": "",
             "path": ""
         })
-        break
-    print "初始化 spider task queue 完成\n"
+
+    print u"初始化 spider task queue 完成\n"
 
 
 def test_handle_result():
