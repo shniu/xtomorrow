@@ -325,8 +325,8 @@ def downloader(task):
             return None
 
         return resp
-    except ReadTimeout:
-        print u"\t|- 抓取超时，再次加入 spider queue"
+    except IOError, e:
+        print u"\t|- 抓取超时，再次加入 spider queue; error: ", e.message
         return None
 
 
