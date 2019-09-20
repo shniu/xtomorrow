@@ -27,6 +27,7 @@ directory_page_cnt = 5
 
 # 任务队列
 spider_task_queue = collections.deque()
+segment = []
 
 # 最终结果存储在这里
 result_list = []
@@ -89,26 +90,55 @@ def get_level1_directory(content, parent_path):
     items = Selector(text=content) \
         .xpath("//ul[@class='center_list_contlist']/li/a")
 
-    for item in items:
+    # 如果 SS == SE == 0 表示没有打开开关
+    SS = segment[0]
+    SE = segment[1]
+    switch_off = SS == SE and SS == 0
+    print u"分组抓取开关关闭状态 ", switch_off
+
+    # for item in items:
+    for i in range(len(items)):
+        item = items[i]
         name = item.xpath("./*/font[@class='cont_tit03']/text()").extract()[0]
         # name = name.encode("utf-8")
         path = parent_path + PATH_SEP + name if parent_path != "" else name
 
-        # add url to spider_task_queue
-        spider_task_queue.append({
-            "level": 1,
-            "url": format_url(directory_url_tpl2, item.xpath("./@href").extract()[0]),
-            "name": name,
-            "path": path
-        })
+        if not switch_off:
+            if SS <= i < SE:
+                print u"\t|- 过滤分组， 进入", SS, SE, u"当前值 ", i
+                # add url to spider_task_queue
+                spider_task_queue.append({
+                    "level": 1,
+                    "url": format_url(directory_url_tpl2, item.xpath("./@href").extract()[0]),
+                    "name": name,
+                    "path": path
+                })
 
-        result_list.append({
-            "name": name,
-            "level": 1,
-            "parent": "",
-            "leaf": False,
-            "path": path
-        })
+                result_list.append({
+                    "name": name,
+                    "level": 1,
+                    "parent": "",
+                    "leaf": False,
+                    "path": path
+                })
+            else:
+                print u"\t|- 过滤分组， 不满足", SS, SE, u"当前值 ", i
+        else:
+            # add url to spider_task_queue
+            spider_task_queue.append({
+                "level": 1,
+                "url": format_url(directory_url_tpl2, item.xpath("./@href").extract()[0]),
+                "name": name,
+                "path": path
+            })
+
+            result_list.append({
+                "name": name,
+                "level": 1,
+                "parent": "",
+                "leaf": False,
+                "path": path
+            })
 
         if env == DEV:
             break
@@ -335,8 +365,13 @@ def downloader(task):
 #@click.argument('end', type=int)
 @click.option('--start', default=0, help='Start page.')
 @click.option('--end', default=1, help='End page.')
-def main(start, end):
+@click.option('--ss', default=0)
+@click.option('--se', default=0)
+def main(start, end, ss, se):
     """ spider """
+    print ss, se
+    segment.append(ss)
+    segment.append(se)
 
     if env == DEBUG:
         test_handle_result()
@@ -381,7 +416,7 @@ def main(start, end):
 
         print u"\t|- 当前剩余 ", len(spider_task_queue), u" 个待处理任务"
 
-        time.sleep(random.random())
+        time.sleep(random.random() + 0.1)
 
     # save result
     ts = str(random.randint(10000, 100000000))
