@@ -5,6 +5,7 @@ import requests
 import time
 import pandas as pd
 import numpy as np
+from requests import ReadTimeout
 from scrapy.selector import Selector
 
 DEBUG = "debug"
@@ -248,8 +249,11 @@ def main():
         print "处理爬虫任务 - ", task
 
         # download
-        resp = requests.get(task['url'])
-        print resp.status_code, resp.encoding, resp.url
+        try:
+            resp = requests.get(task['url'], timeout=10)
+            print resp.status_code, resp.encoding, resp.url
+        except ReadTimeout:
+            pass
 
         # parse html
         if "direct" in task and task['direct']:
@@ -263,7 +267,7 @@ def main():
 
         parse_html(content, task['level'], task['name'], task['url'], task['path'])
 
-        time.sleep(3)
+        time.sleep(1)
 
     print result_list
     handle_result()
