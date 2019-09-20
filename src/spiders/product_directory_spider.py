@@ -14,7 +14,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-path_sep = "->"
+PATH_SEP = "->"
 
 DEBUG = "debug"
 DEV = "dev"
@@ -92,7 +92,7 @@ def get_level1_directory(content, parent_path):
     for item in items:
         name = item.xpath("./*/font[@class='cont_tit03']/text()").extract()[0]
         # name = name.encode("utf-8")
-        path = parent_path + path_sep + name if parent_path != "" else name
+        path = parent_path + PATH_SEP + name if parent_path != "" else name
 
         # add url to spider_task_queue
         spider_task_queue.append({
@@ -130,7 +130,7 @@ def get_level2_directory(content, level, parent, parent_url, parent_path):
 
         name = code[0] + '-' + pn[0]
         # parent_url.replace(".html", "") + href[href.find('/') + 1:]
-        path = parent_path + path_sep + name if parent_path != "" else name
+        path = parent_path + PATH_SEP + name if parent_path != "" else name
 
         # add url to spider_task_queue
         if not leaf:
@@ -172,6 +172,7 @@ def get_level3_directory(content, level, parent, parent_url, parent_path):
 
         # code = item.xpath("./td[1]/a/text()").extract()[0]
         name = code[0] + '-' + pn[0]
+        path = parent_path + PATH_SEP + name if parent_path != "" else name
 
         # add url to spider_task_queue
         if not leaf:
@@ -181,7 +182,7 @@ def get_level3_directory(content, level, parent, parent_url, parent_path):
                 "url": parent_url[0:parent_url.rfind('/') + 1] + href,
                 "name": name,
                 "direct": len(code[0]) > 6,
-                "path": parent_path + "/" + name if parent_path != "" else name
+                "path": path
             })
 
         result_list.append({
@@ -189,7 +190,7 @@ def get_level3_directory(content, level, parent, parent_url, parent_path):
             "level": level + 1,
             "parent": parent,
             "leaf": leaf,
-            "path": parent_path + "/" + name if parent_path != "" else name
+            "path": path
         })
 
         if env == DEV:
@@ -209,6 +210,7 @@ def get_level4_directory(content, level, parent, parent_url, parent_path):
             pn = item.xpath("./td[2]/text()").extract()
 
         name = code[0] + '-' + pn[0]
+        path = parent_path + PATH_SEP + name if parent_path != "" else name
 
         # add url to spider_task_queue
         if not leaf:
@@ -217,7 +219,7 @@ def get_level4_directory(content, level, parent, parent_url, parent_path):
                 "level": level + 1,
                 "url": parent_url[0:parent_url.rfind('/') + 1] + href,
                 "name": name,
-                "path": parent_path + "/" + name if parent_path != "" else name
+                "path": path
             })
 
         result_list.append({
@@ -225,7 +227,7 @@ def get_level4_directory(content, level, parent, parent_url, parent_path):
             "level": level + 1,
             "parent": parent,
             "leaf": leaf,
-            "path": parent_path + "/" + name if parent_path != "" else name
+            "path": path
         })
 
         if env == DEV:
@@ -243,7 +245,7 @@ def get_level5_directory(content, level, parent, parent_path):
             "level": level + 1,
             "parent": parent,
             "leaf": True,
-            "path": parent_path + "/" + name if parent_path != "" else name
+            "path": parent_path + PATH_SEP + name if parent_path != "" else name
         })
     
     print u"\t\t|- 解析 ", len(items), u" 个叶子目录, 处理掉 1 个终结任务"
