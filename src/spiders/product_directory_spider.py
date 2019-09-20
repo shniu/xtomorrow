@@ -240,7 +240,7 @@ def get_level5_directory(content, level, parent, parent_path):
             "path": parent_path + "/" + name if parent_path != "" else name
         })
     
-    print u"\t\t|- 解析 ", len(items), u" 个叶子目录"
+    print u"\t\t|- 解析 ", len(items), u" 个叶子目录, 处理掉 1 个终结任务"
 
 
 def parse_html(content, level, name, url, path):
@@ -316,8 +316,10 @@ def downloader(task):
 
 
 @click.command()
-@click.argument('start', type=int)
-@click.argument('end', type=int)
+#@click.argument('start', type=int)
+#@click.argument('end', type=int)
+@click.option('--start', default=0, help='Start page.')
+@click.option('--end', default=1, help='End page.')
 def main(start, end):
     """ spider """
 
