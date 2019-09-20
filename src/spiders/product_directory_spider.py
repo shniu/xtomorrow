@@ -14,6 +14,8 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
+path_sep = "->"
+
 DEBUG = "debug"
 DEV = "dev"
 env = "publish"
@@ -30,6 +32,8 @@ spider_task_queue = collections.deque()
 # 最终结果存储在这里
 result_list = []
 err_list = []
+err_req_list = []
+special_handle_list = []
 
 user_agent = [
     "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; en-us) AppleWebKit/534.50 (KHTML, like Gecko) Version/5.1 Safari/534.50",
@@ -88,13 +92,14 @@ def get_level1_directory(content, parent_path):
     for item in items:
         name = item.xpath("./*/font[@class='cont_tit03']/text()").extract()[0]
         # name = name.encode("utf-8")
+        path = parent_path + path_sep + name if parent_path != "" else name
 
         # add url to spider_task_queue
         spider_task_queue.append({
             "level": 1,
             "url": format_url(directory_url_tpl2, item.xpath("./@href").extract()[0]),
             "name": name,
-            "path": parent_path + "/" + name if parent_path != "" else name
+            "path": path
         })
 
         result_list.append({
@@ -102,7 +107,7 @@ def get_level1_directory(content, parent_path):
             "level": 1,
             "parent": "",
             "leaf": False,
-            "path": parent_path + "/" + name if parent_path != "" else name
+            "path": path
         })
 
         if env == DEV:
@@ -125,6 +130,7 @@ def get_level2_directory(content, level, parent, parent_url, parent_path):
 
         name = code[0] + '-' + pn[0]
         # parent_url.replace(".html", "") + href[href.find('/') + 1:]
+        path = parent_path + path_sep + name if parent_path != "" else name
 
         # add url to spider_task_queue
         if not leaf:
@@ -133,7 +139,7 @@ def get_level2_directory(content, level, parent, parent_url, parent_path):
                 "level": level + 1,
                 "url": parent_url.replace(".html", "") + href[href.find('/'):],
                 "name": name,
-                "path": parent_path + "/" + name if parent_path != "" else name
+                "path": path
             })
 
         result_list.append({
@@ -141,7 +147,7 @@ def get_level2_directory(content, level, parent, parent_url, parent_path):
             "level": level + 1,
             "parent": parent,
             "leaf": leaf,
-            "path": parent_path + "/" + name if parent_path != "" else name
+            "path": path
         })
 
         if env == DEV:
@@ -174,7 +180,7 @@ def get_level3_directory(content, level, parent, parent_url, parent_path):
                 "level": level + 1,
                 "url": parent_url[0:parent_url.rfind('/') + 1] + href,
                 "name": name,
-                "direct": len(code) > 6,
+                "direct": len(code[0]) > 6,
                 "path": parent_path + "/" + name if parent_path != "" else name
             })
 
@@ -307,6 +313,7 @@ def downloader(task):
         resp = requests.get(task['url'], timeout=15, headers=headers)
         print u"\t|- 请求响应 -> ", resp.status_code, resp.encoding, resp.url
         if resp.status_code != 200:
+            err_req_list.append({"code": resp.status_code, "url": resp.url})
             return None
 
         return resp
@@ -354,6 +361,7 @@ def main(start, end):
         # parse html
         if "direct" in task and task['direct']:
             print u"\t|- 特殊处理 -> ", task['url']
+            special_handle_list.append(task)
             get_level5_directory(resp.content, task['level'], task['name'], task['path'])
 
         try:
@@ -369,14 +377,16 @@ def main(start, end):
 
     # save result
     res_local_name = "res-{}-{}.xlsx".format(str(start), str(end))
-    print u"\t|- 保存解析结果到 ", res_local_name
+    print u"保存解析结果到 -> ", res_local_name
     df = pd.DataFrame(result_list)
     df.to_excel(res_local_name)
 
     file_name = "directory-{}-{}.xlsx".format(str(start), str(end))
     handle_result(file_name)
 
-    print err_list
+    print u"处理结果异常数据 -> ", err_list
+    print u"下载页面请求异常 -> ", err_req_list
+    print u"特殊处理数据 -> ", special_handle_list
     print u"爬虫任务爬取结束"
 
 
