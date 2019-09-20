@@ -29,6 +29,7 @@ spider_task_queue = collections.deque()
 
 # 最终结果存储在这里
 result_list = []
+err_list = []
 
 user_agent = [
     "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; en-us) AppleWebKit/534.50 (KHTML, like Gecko) Version/5.1 Safari/534.50",
@@ -262,22 +263,37 @@ def parse_html(content, level, name, url, path):
     print u"\t|- 处理完成 get level -> ", level + 1
 
 
+def valid(path):
+    path_arr = path.split("/")
+    if len(path_arr) <= 5:
+        return path_arr
+    else:
+        return None
+
+
 def handle_result(file_name):
     martx = []
     max_level = 5
     for res in result_list:
         if 'leaf' in res and res['leaf']:
             path = res['path']
-            items = path.split('/')
+            items = valid(path)
+            # 如果path路径大于5，就不合法，记录下来
+            if items is None:
+                err_list.append(res)
+                continue
 
             row = []
             for item in items:
                 row.append(item)
 
+            # 不足5个路径的，补全
             for i in range(max_level - len(row)):
                 row.append("")
 
             martx.append(row)
+        elif 'leaf' not in res:
+            err_list.append(res)
 
     df = pd.DataFrame(martx, columns=['一级目录', '二级目录', '三级目录', '四级目录', '五级目录'])
     df.to_excel(file_name)
@@ -357,6 +373,9 @@ def main(start, end):
 
     file_name = "directory-{}-{}.xlsx".format(str(start), str(end))
     handle_result(file_name)
+
+    print err_list
+    print u"爬虫任务爬取结束"
 
 
 def init_spider_queue(start, end):
