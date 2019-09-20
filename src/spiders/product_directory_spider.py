@@ -384,7 +384,7 @@ def test_handle_result():
         "parent": "0101010",
         "path": "01/0101/010101/01010101/0101010101"
     })
-    handle_result()
+    handle_result("test.xlsx")
 
 
 def test_get_level2():
